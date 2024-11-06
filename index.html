@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workout Calendar</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1.5rem;
+        }
+
+        .calendar-day {
+            background-color: #fff;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .calendar-day:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .calendar-day.today {
+            background-color: #4CAF50;
+            color: #fff;
+        }
+
+        .calendar-day h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .calendar-day p {
+            font-size: 0.875rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            width: 90%;
+            max-width: 400px;
+            animation: slideDown 0.3s;
+        }
+
+        .modal-content h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-input {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-input label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .modal-input input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #ccc;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .modal-button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .modal-button.save {
+            background-color: #4CAF50;
+            color: #fff;
+        }
+
+        .modal-button.save:hover {
+            background-color: #45a049;
+        }
+
+        .modal-button.cancel {
+            background-color: #f1f1f1;
+            color: #333;
+        }
+
+        .modal-button.cancel:hover {
+            background-color: #e6e6e6;
+        }
+
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .nav-button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            background-color: #4CAF50;
+            color: #fff;
+        }
+
+        .nav-button:hover {
+            background-color: #45a049;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-buttons">
+            <button class="nav-button" id="prev-month">Previous Month</button>
+            <h1 class="text-center text-2xl font-bold mb-8" id="current-month">Workout Calendar</h1>
+            <button class="nav-button" id="next-month">Next Month</button>
+        </div>
+        <div class="calendar" id="workout-calendar">
+            <!-- Calendar days will be dynamically generated here -->
+        </div>
+    </div>
+
+    <div class="modal" id="workout-modal">
+        <div class="modal-content">
+            <h2 id="modal-date">Workout for 2023-11-01</h2>
+            <div class="modal-input">
+                <label for="pushups">Pushups</label>
+                <input type="number" id="pushups" value="20">
+            </div>
+            <div class="modal-input">
+                <label for="pullups">Pullups</label>
+                <input type="number" id="pullups" value="10">
+            </div>
+            <div class="modal-input">
+                <label for="abs">Abs</label>
+                <input type="number" id="abs" value="30">
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-button save" id="save-workout">Save</button>
+                <button class="modal-button cancel" id="cancel-workout">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const calendarContainer = document.getElementById('workout-calendar');
+        const modal = document.getElementById('workout-modal');
+        const modalDate = document.getElementById('modal-date');
+        const pushups = document.getElementById('pushups');
+        const pullups = document.getElementById('pullups');
+        const abs = document.getElementById('abs');
+        const saveWorkoutButton = document.getElementById('save-workout');
+        const cancelWorkoutButton = document.getElementById('cancel-workout');
+        const prevMonthButton = document.getElementById('prev-month');
+        const nextMonthButton = document.getElementById('next-month');
+        const currentMonthDisplay = document.getElementById('current-month');
+
+        let currentDate = new Date();
+        let currentMonth = currentDate.getMonth();
+        let currentYear = currentDate.getFullYear();
+
+        function createCalendarDay(day, workout) {
+            const calendarDay = document.createElement('div');
+            calendarDay.classList.add('calendar-day');
+
+            // Check if the day is the current day
+            if (day === currentDate.getDate() && currentMonth === currentDate.getMonth() && currentYear === currentDate.getFullYear()) {
+                calendarDay.classList.add('today');
+            }
+
+            calendarDay.onclick = () => openModal(new Date(currentYear, currentMonth, day).toISOString().slice(0, 10));
+
+            const dayElement = document.createElement('h3');
+            dayElement.textContent = day;
+            calendarDay.appendChild(dayElement);
+
+            if (workout) {
+                const pushupsElement = document.createElement('p');
+                pushupsElement.textContent = `Pushups: ${workout.pushups}`;
+                const pullupsElement = document.createElement('p');
+                pullupsElement.textContent = `Pullups: ${workout.pullups}`;
+                const absElement = document.createElement('p');
+                absElement.textContent = `Abs: ${workout.abs}`;
+                calendarDay.appendChild(pushupsElement);
+                calendarDay.appendChild(pullupsElement);
+                calendarDay.appendChild(absElement);
+            }
+
+            return calendarDay;
+        }
+
+        function openModal(date) {
+            const workout = getWorkoutForDate(date);
+            modalDate.textContent = `Workout for ${date}`;
+            pushups.value = workout ? workout.pushups : 0;
+            pullups.value = workout ? workout.pullups : 0;
+            abs.value = workout ? workout.abs : 0;
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        function saveWorkout() {
+            const date = modalDate.textContent.split(' ')[2];
+            const workout = {
+                date,
+                pushups: parseInt(pushups.value),
+                pullups: parseInt(pullups.value),
+                abs: parseInt(abs.value)
+            };
+            saveWorkoutToLocalStorage(workout);
+            closeModal();
+            updateCalendar();
+        }
+
+        function getWorkoutForDate(date) {
+            const workoutData = getWorkoutsFromLocalStorage();
+            return workoutData.find((item) => item.date === date);
+        }
+
+        function getWorkoutsFromLocalStorage() {
+            const workoutData = localStorage.getItem('workoutData');
+            return workoutData ? JSON.parse(workoutData) : [];
+        }
+
+        function saveWorkoutToLocalStorage(workout) {
+            const workoutData = getWorkoutsFromLocalStorage();
+            const existingIndex = workoutData.findIndex((item) => item.date === workout.date);
+            if (existingIndex !== -1) {
+                workoutData[existingIndex] = workout;
+            } else {
+                workoutData.push(workout);
+            }
+            localStorage.setItem('workoutData', JSON.stringify(workoutData));
+        }
+
+        function updateCalendar() {
+            calendarContainer.innerHTML = '';
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            for (let i = 0; i < daysInMonth; i++) {
+                const date = new Date(currentYear, currentMonth, i + 1).toISOString().slice(0, 10);
+                const workout = getWorkoutForDate(date);
+                const calendarDay = createCalendarDay(i + 1, workout);
+                calendarContainer.appendChild(calendarDay);
+            }
+            currentMonthDisplay.textContent = `${new Date(currentYear, currentMonth).toLocaleString('default', { month: 'long' })} ${currentYear}`;
+        }
+
+        prevMonthButton.addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            updateCalendar();
+        });
+
+        nextMonthButton.addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            updateCalendar();
+        });
+
+        saveWorkoutButton.addEventListener('click', saveWorkout);
+        cancelWorkoutButton.addEventListener('click', closeModal);
+
+        window.addEventListener('click', (event) => {
+            if (event.target == modal) {
+                closeModal();
+            }
+        });
+
+        updateCalendar();
+    </script>
+</body>
+</html>

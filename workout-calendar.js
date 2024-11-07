@@ -1,4 +1,3 @@
-// Define the template for our custom element
 const template = document.createElement('template');
 template.innerHTML = `
   <style>
@@ -224,11 +223,11 @@ class WorkoutCalendar extends HTMLElement {
     return 'bg-green-100';
   }
 
-  isCurrentDay(day) {
+  isCurrentDay(day, month, year) {
     const currentDate = new Date();
     return currentDate.getDate() === day &&
-           currentDate.getMonth() === new Date().getMonth() &&
-           currentDate.getFullYear() === new Date().getFullYear();
+           currentDate.getMonth() === month &&
+           currentDate.getFullYear() === year;
   }
 
   openModal(date) {
@@ -311,7 +310,7 @@ class WorkoutCalendar extends HTMLElement {
       const workout = this.workouts.find(w => w.date === date);
 
       const dayEl = document.createElement('div');
-      dayEl.className = `day ${this.isCurrentDay(day) ? 'bg-yellow-200 border-yellow-400' : this.getWorkoutIntensity(workout)}`;
+      dayEl.className = `day ${this.isCurrentDay(day, this.currentMonth, this.currentYear) ? 'bg-yellow-200 border-yellow-400' : this.getWorkoutIntensity(workout)}`;
       
       dayEl.innerHTML = `
         <div class="day-number">${day}</div>
@@ -331,5 +330,4 @@ class WorkoutCalendar extends HTMLElement {
   }
 }
 
-// Register the custom element
 customElements.define('workout-calendar', WorkoutCalendar);

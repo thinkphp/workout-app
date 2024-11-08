@@ -38,6 +38,7 @@ template.innerHTML = `
 
     .day:hover {
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transform: scale(1.05);
     }
 
     .day-number {
@@ -61,20 +62,25 @@ template.innerHTML = `
     .bg-yellow-200 { background-color: #fef08a; }
     .border-yellow-400 { border-color: #facc15; }
 
-    .modal {
-      display: none;
+ .modal {
+      display: flex;
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.5);
+      background-color: rgba(0, 0, 0, 0);
       align-items: center;
       justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease-in-out;
     }
 
     .modal.open {
-      display: flex;
+      opacity: 1;
+      visibility: visible;
+      background-color: rgba(0, 0, 0, 0.5);
     }
 
     .modal-content {
@@ -83,12 +89,14 @@ template.innerHTML = `
       border-radius: 0.5rem;
       width: 90%;
       max-width: 500px;
+      transform: scale(0.7);
+      opacity: 0;
+      transition: all 0.3s ease-in-out;
     }
 
-    .modal-header {
-      font-size: 1.25rem;
-      font-weight: bold;
-      margin-bottom: 1.5rem;
+    .modal.open .modal-content {
+      transform: scale(1);
+      opacity: 1;
     }
 
     .form-group {
@@ -107,6 +115,13 @@ template.innerHTML = `
       border: 1px solid #e5e7eb;
       border-radius: 0.375rem;
       margin-bottom: 1rem;
+      transition: all 0.2s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
     }
 
     .button-group {
@@ -120,6 +135,11 @@ template.innerHTML = `
       border-radius: 0.375rem;
       cursor: pointer;
       font-weight: 500;
+      transition: transform 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
     }
 
     .button-primary {
@@ -131,6 +151,52 @@ template.innerHTML = `
     .button-secondary {
       background-color: white;
       border: 1px solid #e5e7eb;
+    }
+
+    /* Toast styles */
+    .toast {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      background-color: #dcfce7;
+      border: 1px solid #86efac;
+      color: #166534;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 300px;
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(100%);
+      transition: all 0.3s ease-in-out;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: #166534;
+      cursor: pointer;
+      padding: 0.25rem;
+      margin-left: 0.5rem;
+    }
+
+    /* Animation for updated cell */
+    @keyframes scale-up-center {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .scale-up-center {
+      animation: scale-up-center 0.5s cubic-bezier(0.390, 0.575, 0.565, 1.000) both;
     }
   </style>
 
@@ -170,6 +236,11 @@ template.innerHTML = `
       </div>
     </div>
   </div>
+
+  <div class="toast">
+    <span>Activity updated successfully</span>
+    <button class="toast-close">&times;</button>
+  </div>
 `;
 
 class WorkoutCalendar extends HTMLElement {
@@ -190,15 +261,33 @@ class WorkoutCalendar extends HTMLElement {
     this.saveWorkout = this.saveWorkout.bind(this);
     this.navigateToPreviousMonth = this.navigateToPreviousMonth.bind(this);
     this.navigateToNextMonth = this.navigateToNextMonth.bind(this);
+    this.showToast = this.showToast.bind(this);
+    this.hideToast = this.hideToast.bind(this);
     
     // Add event listeners
     this.shadowRoot.getElementById('save-button').addEventListener('click', this.saveWorkout);
     this.shadowRoot.getElementById('cancel-button').addEventListener('click', this.closeModal);
     this.shadowRoot.getElementById('prev-button').addEventListener('click', this.navigateToPreviousMonth);
     this.shadowRoot.getElementById('next-button').addEventListener('click', this.navigateToNextMonth);
+    this.shadowRoot.querySelector('.toast-close').addEventListener('click', this.hideToast);
     
     // Load saved workouts
     this.loadWorkouts();
+  }
+
+  showToast() {
+    const toast = this.shadowRoot.querySelector('.toast');
+    toast.classList.add('show');
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      this.hideToast();
+    }, 3000);
+  }
+
+  hideToast() {
+    const toast = this.shadowRoot.querySelector('.toast');
+    toast.classList.remove('show');
   }
 
   connectedCallback() {
@@ -275,6 +364,18 @@ class WorkoutCalendar extends HTMLElement {
     localStorage.setItem('workoutData', JSON.stringify(this.workouts));
     this.closeModal();
     this.renderCalendar();
+    
+    // Show success toast
+    this.showToast();
+
+    // Add animation to the updated cell
+    const updatedCell = this.shadowRoot.querySelector(`[data-date="${this.selectedDate}"]`);
+    if (updatedCell) {
+      updatedCell.classList.add('scale-up-center');
+      setTimeout(() => {
+        updatedCell.classList.remove('scale-up-center');
+      }, 500);
+    }
   }
 
   navigateToPreviousMonth() {
@@ -311,6 +412,7 @@ class WorkoutCalendar extends HTMLElement {
 
       const dayEl = document.createElement('div');
       dayEl.className = `day ${this.isCurrentDay(day, this.currentMonth, this.currentYear) ? 'bg-yellow-200 border-yellow-400' : this.getWorkoutIntensity(workout)}`;
+      dayEl.setAttribute('data-date', date);
       
       dayEl.innerHTML = `
         <div class="day-number">${day}</div>
